@@ -3,10 +3,10 @@ use std::cmp::min;
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LazyOption, LookupMap, UnorderedMap, UnorderedSet};
-use near_sdk::json_types::{Base64VecU8, ValidAccountId, U64, U128};
+use near_sdk::json_types::{Base64VecU8, U64, U128};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{
-    env, near_bindgen, AccountId, Balance, CryptoHash, PanicOnDefault, Promise, StorageUsage,
+    env, near_bindgen, serde_json::json, AccountId, Balance, CryptoHash, PanicOnDefault, Promise, StorageUsage,
 };
 
 use crate::internal::*;
@@ -29,7 +29,10 @@ pub type TypeSupplyCaps = HashMap<TokenType, U64>;
 pub const CONTRACT_ROYALTY_CAP: u32 = 1000;
 pub const MINTER_ROYALTY_CAP: u32 = 2000;
 
-near_sdk::setup_alloc!();
+/// log type const
+pub const EVENT_JSON: &str = "EVENT_JSON:";
+
+// near_sdk::setup_alloc!();
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
@@ -70,7 +73,7 @@ pub enum StorageKey {
 #[near_bindgen]
 impl Contract {
     #[init]
-    pub fn new(owner_id: ValidAccountId, metadata: NFTMetadata, supply_cap_by_type: TypeSupplyCaps, unlocked: Option<bool>) -> Self {
+    pub fn new(owner_id: AccountId, metadata: NFTMetadata, supply_cap_by_type: TypeSupplyCaps, unlocked: Option<bool>) -> Self {
         let mut this = Self {
             tokens_per_owner: LookupMap::new(StorageKey::TokensPerOwner.try_to_vec().unwrap()),
             tokens_by_id: LookupMap::new(StorageKey::TokensById.try_to_vec().unwrap()),
@@ -103,7 +106,7 @@ impl Contract {
 
     fn measure_min_token_storage_cost(&mut self) {
         let initial_storage_usage = env::storage_usage();
-        let tmp_account_id = "a".repeat(64);
+        let tmp_account_id = AccountId::new_unchecked("a".repeat(64));
         let u = UnorderedSet::new(
             StorageKey::TokenPerOwnerInner {
                 account_id_hash: hash_account_id(&tmp_account_id),
@@ -114,7 +117,7 @@ impl Contract {
         self.tokens_per_owner.insert(&tmp_account_id, &u);
 
         let tokens_per_owner_entry_in_bytes = env::storage_usage() - initial_storage_usage;
-        let owner_id_extra_cost_in_bytes = (tmp_account_id.len() - self.owner_id.len()) as u64;
+        let owner_id_extra_cost_in_bytes = (tmp_account_id.to_string().len() - self.owner_id.to_string().len()) as u64;
 
         self.extra_storage_in_bytes_per_token =
             tokens_per_owner_entry_in_bytes + owner_id_extra_cost_in_bytes;

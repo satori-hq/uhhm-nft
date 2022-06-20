@@ -8,7 +8,7 @@ impl Contract {
         token_id: Option<TokenId>,
         metadata: TokenMetadata,
         perpetual_royalties: Option<HashMap<AccountId, u32>>,
-        receiver_id: Option<ValidAccountId>,
+        receiver_id: Option<AccountId>,
         token_type: Option<TokenType>,
     ) {
         assert_eq!(env::predecessor_account_id(), format!("owner.{}", env::current_account_id()), "must be owner");
@@ -50,7 +50,7 @@ impl Contract {
                 .unwrap_or_else(|| {
                     UnorderedSet::new(
                         StorageKey::TokensPerTypeInner {
-                            token_type_hash: hash_account_id(&token_type),
+                            token_type_hash: hash_account_id(&AccountId::new_unchecked(token_type.clone())),
                         }
                         .try_to_vec()
                         .unwrap(),
@@ -80,5 +80,17 @@ impl Contract {
             self.extra_storage_in_bytes_per_token + new_token_size_in_bytes;
 
         refund_deposit(required_storage_in_bytes);
+
+        env::log_str(format!("{}{}", EVENT_JSON, json!({
+			"standard": "nep171",
+			"version": "1.0.0",
+			"event": "nft_mint",
+			"data": [
+			  	{
+					  "owner_id": receiver_id,
+					  "token_ids": [token_id]
+				}
+			]
+		})).as_ref());
     }
 }

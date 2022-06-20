@@ -25,7 +25,7 @@ pub struct Sale {
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct PurchaseArgs {
-    pub nft_contract_id: ValidAccountId,
+    pub nft_contract_id: AccountId,
     pub token_id: TokenId,
 }
 
@@ -35,7 +35,7 @@ impl Contract {
 
     /// TODO remove without redirect to wallet? panic reverts
     #[payable]
-    pub fn remove_sale(&mut self, nft_contract_id: ValidAccountId, token_id: String) {
+    pub fn remove_sale(&mut self, nft_contract_id: AccountId, token_id: String) {
         assert_one_yocto();
         let sale = self.internal_remove_sale(nft_contract_id.into(), token_id);
         let owner_id = env::predecessor_account_id();
@@ -46,9 +46,9 @@ impl Contract {
     #[payable]
     pub fn update_price(
         &mut self,
-        nft_contract_id: ValidAccountId,
+        nft_contract_id: AccountId,
         token_id: String,
-        ft_token_id: ValidAccountId,
+        ft_token_id: AccountId,
         price: U128,
     ) {
         assert_one_yocto();
@@ -60,7 +60,7 @@ impl Contract {
             sale.owner_id,
             "Must be sale owner"
         );
-        if !self.ft_token_ids.contains(ft_token_id.as_ref()) {
+        if !self.ft_token_ids.contains(&ft_token_id) {
             env::panic(format!("Token {} not supported by this market", ft_token_id).as_bytes());
         }
         sale.sale_conditions.insert(ft_token_id.into(), price);
@@ -68,7 +68,7 @@ impl Contract {
     }
 
     #[payable]
-    pub fn offer(&mut self, nft_contract_id: ValidAccountId, token_id: String) {
+    pub fn offer(&mut self, nft_contract_id: AccountId, token_id: String) {
         let contract_id: AccountId = nft_contract_id.into();
         let contract_and_token_id = format!("{}{}{}", contract_id, DELIMETER, token_id);
         let mut sale = self.sales.get(&contract_and_token_id).expect("No sale");
@@ -77,7 +77,7 @@ impl Contract {
         let ft_token_id = "near".to_string();
         let price = sale
             .sale_conditions
-            .get(&ft_token_id)
+            .get(&AccountId::new_unchecked(ft_token_id))
             .expect("Not for sale in NEAR")
             .0;
 
@@ -88,7 +88,7 @@ impl Contract {
             self.process_purchase(
                 contract_id,
                 token_id,
-                ft_token_id,
+                AccountId::new_unchecked(ft_token_id),
                 U128(deposit),
                 buyer_id,
             );
@@ -99,7 +99,7 @@ impl Contract {
             self.add_bid(
                 contract_and_token_id,
                 deposit,
-                ft_token_id,
+                AccountId::new_unchecked(ft_token_id),
                 buyer_id,
                 &mut sale,
             );
@@ -130,14 +130,14 @@ impl Contract {
                 "Can't pay less than or equal to current bid price: {}",
                 current_bid.price.0
             );
-            if ft_token_id == "near" {
+            if ft_token_id == AccountId::new_unchecked("near".to_string()) {
                 Promise::new(current_bid.owner_id.clone()).transfer(u128::from(current_bid.price));
             } else {
                 ext_contract::ft_transfer(
                     current_bid.owner_id.clone(),
                     current_bid.price,
                     None,
-                    &ft_token_id,
+                    ft_token_id,
                     1,
                     GAS_FOR_FT_TRANSFER,
                 );
@@ -154,15 +154,15 @@ impl Contract {
 
     pub fn accept_offer(
         &mut self,
-        nft_contract_id: ValidAccountId,
+        nft_contract_id: AccountId,
         token_id: String,
-        ft_token_id: ValidAccountId,
+        ft_token_id: AccountId,
     ) {
         let contract_id: AccountId = nft_contract_id.into();
         let contract_and_token_id = format!("{}{}{}", contract_id.clone(), DELIMETER, token_id.clone());
         // remove bid before proceeding to process purchase
         let mut sale = self.sales.get(&contract_and_token_id).expect("No sale");
-        let bids_for_token_id = sale.bids.remove(ft_token_id.as_ref()).expect("No bids");
+        let bids_for_token_id = sale.bids.remove(&ft_token_id).expect("No bids");
         let bid = &bids_for_token_id[bids_for_token_id.len()-1];
         self.sales.insert(&contract_and_token_id, &sale);
         // panics at `self.internal_remove_sale` and reverts above if predecessor is not sale.owner_id
@@ -193,7 +193,7 @@ impl Contract {
             "payout from market".to_string(),
             price,
 			10,
-            &nft_contract_id,
+            nft_contract_id,
             1,
             GAS_FOR_NFT_TRANSFER,
         )
@@ -202,7 +202,7 @@ impl Contract {
             buyer_id,
             sale,
             price,
-            &env::current_account_id(),
+            env::current_account_id(),
             NO_DEPOSIT,
             GAS_FOR_ROYALTIES,
         ))
@@ -247,7 +247,7 @@ impl Contract {
         let payout = if let Some(payout_option) = payout_option {
             payout_option
         } else {
-            if ft_token_id == "near" {
+            if ft_token_id == AccountId::new_unchecked("near".to_string()) {
                 Promise::new(buyer_id).transfer(u128::from(price));
             }
             // leave function and return all FTs in ft_resolve_transfer
@@ -257,7 +257,7 @@ impl Contract {
         self.refund_all_bids(&sale.bids);
 
         // NEAR payouts
-        if ft_token_id == "near" {
+        if ft_token_id == AccountId::new_unchecked("near".to_string()) {
             for (receiver_id, amount) in payout {
                 Promise::new(receiver_id).transfer(amount.0);
             }
@@ -270,7 +270,7 @@ impl Contract {
                     receiver_id,
                     amount,
                     None,
-                    &ft_token_id,
+                    ft_token_id,
                     1,
                     GAS_FOR_FT_TRANSFER,
                 );

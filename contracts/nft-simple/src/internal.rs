@@ -1,5 +1,5 @@
 use crate::*;
-use near_sdk::{log, CryptoHash};
+use near_sdk::{log, CryptoHash, env};
 use std::mem::size_of;
 
 pub(crate) fn royalty_to_payout(a: u32, b: Balance) -> U128 {
@@ -46,7 +46,7 @@ pub(crate) fn refund_deposit(storage_used: u64) {
 // TODO: need a way for end users to determine how much an approval will cost.
 pub(crate) fn bytes_for_approved_account_id(account_id: &AccountId) -> u64 {
     // The extra 4 bytes are coming from Borsh serialization to store the length of the string.
-    account_id.len() as u64 + 4 + size_of::<u64>() as u64
+    account_id.to_string().len() as u64 + 4 + size_of::<u64>() as u64
 }
 
 pub(crate) fn refund_approved_account_ids_iter<'a, I>(
@@ -172,6 +172,17 @@ impl Contract {
         if let Some(memo) = memo {
             env::log(format!("Memo: {}", memo).as_bytes());
         }
+
+        env::log_str(format!("{}{}", EVENT_JSON, json!({
+            "standard": "nep171",
+            "version": "1.0.0",
+            "event": "nft_transfer",
+            "data": [
+                {
+                    "old_owner_id": sender_id, "new_owner_id": receiver_id, "token_ids": [token_id]
+                }
+            ]
+        })).as_ref());
 
         token
     }

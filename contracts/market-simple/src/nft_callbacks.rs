@@ -15,7 +15,7 @@ trait NonFungibleTokenApprovalsReceiver {
     fn nft_on_approve(
         &mut self,
         token_id: TokenId,
-        owner_id: ValidAccountId,
+        owner_id: AccountId,
         approval_id: u64,
         msg: String,
     );
@@ -28,7 +28,7 @@ impl NonFungibleTokenApprovalsReceiver for Contract {
     fn nft_on_approve(
         &mut self,
         token_id: TokenId,
-        owner_id: ValidAccountId,
+        owner_id: AccountId,
         approval_id: u64,
         msg: String,
     ) {
@@ -80,7 +80,7 @@ impl NonFungibleTokenApprovalsReceiver for Contract {
             &Sale {
                 owner_id: owner_id.clone().into(),
                 approval_id,
-                nft_contract_id: nft_contract_id.clone(),
+                nft_contract_id: nft_contract_id.to_string(),
                 token_id: token_id.clone(),
                 sale_conditions,
                 bids,
@@ -92,10 +92,10 @@ impl NonFungibleTokenApprovalsReceiver for Contract {
 
         // extra for views
 
-        let mut by_owner_id = self.by_owner_id.get(owner_id.as_ref()).unwrap_or_else(|| {
+        let mut by_owner_id = self.by_owner_id.get(&owner_id).unwrap_or_else(|| {
             UnorderedSet::new(
                 StorageKey::ByOwnerIdInner {
-                    account_id_hash: hash_account_id(owner_id.as_ref()),
+                    account_id_hash: hash_account_id(&owner_id),
                 }
                 .try_to_vec()
                 .unwrap(),
@@ -108,7 +108,7 @@ impl NonFungibleTokenApprovalsReceiver for Contract {
             "User has more sales than storage paid"
         );
         by_owner_id.insert(&contract_and_token_id);
-        self.by_owner_id.insert(owner_id.as_ref(), &by_owner_id);
+        self.by_owner_id.insert(&owner_id, &by_owner_id);
 
         let mut by_nft_contract_id = self
             .by_nft_contract_id
@@ -130,11 +130,11 @@ impl NonFungibleTokenApprovalsReceiver for Contract {
             assert!(token_id.contains(&token_type), "TokenType should be substr of TokenId");
             let mut by_nft_token_type = self
                 .by_nft_token_type
-                .get(&token_type)
+                .get(&AccountId::new_unchecked(token_type))
                 .unwrap_or_else(|| {
                     UnorderedSet::new(
                         StorageKey::ByNFTTokenTypeInner {
-                            token_type_hash: hash_account_id(&token_type),
+                            token_type_hash: hash_account_id(&AccountId::new_unchecked(token_type)),
                         }
                         .try_to_vec()
                         .unwrap(),
@@ -142,7 +142,7 @@ impl NonFungibleTokenApprovalsReceiver for Contract {
                 });
                 by_nft_token_type.insert(&contract_and_token_id);
             self.by_nft_token_type
-                .insert(&token_type, &by_nft_token_type);
+                .insert(&AccountId::new_unchecked(token_type), &by_nft_token_type);
         }
     }
 }

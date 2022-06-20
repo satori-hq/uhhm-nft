@@ -82,7 +82,7 @@ impl Contract {
         &self,
         token_type: String,
     ) -> U64 {
-        let by_nft_token_type = self.by_nft_token_type.get(&token_type);
+        let by_nft_token_type = self.by_nft_token_type.get(&AccountId::new_unchecked(token_type));
         if let Some(by_nft_token_type) = by_nft_token_type {
             U64(by_nft_token_type.len())
         } else {
@@ -97,7 +97,7 @@ impl Contract {
         limit: u64,
     ) -> Vec<Sale> {
         let mut tmp = vec![];
-        let by_nft_token_type = self.by_nft_token_type.get(&token_type);
+        let by_nft_token_type = self.by_nft_token_type.get(&AccountId::new_unchecked(token_type));
         let sales = if let Some(by_nft_token_type) = by_nft_token_type {
             by_nft_token_type
         } else {

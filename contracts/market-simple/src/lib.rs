@@ -1,6 +1,6 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet};
-use near_sdk::json_types::{ValidAccountId, U128, U64};
+use near_sdk::json_types::{U128, U64};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{
     assert_one_yocto, env, ext_contract, near_bindgen, AccountId, Balance, Gas, PanicOnDefault,
@@ -21,14 +21,14 @@ mod nft_callbacks;
 mod sale;
 mod sale_views;
 
-near_sdk::setup_alloc!();
+// near_sdk::setup_alloc!();
 
 // TODO check seller supports storage_deposit at ft_token_id they want to post sale in
 
-const GAS_FOR_FT_TRANSFER: Gas = 5_000_000_000_000;
+const GAS_FOR_FT_TRANSFER: Gas = Gas(5_000_000_000_000);
 /// greedy max Tgas for resolve_purchase
-const GAS_FOR_ROYALTIES: Gas = 115_000_000_000_000;
-const GAS_FOR_NFT_TRANSFER: Gas = 15_000_000_000_000;
+const GAS_FOR_ROYALTIES: Gas = Gas(115_000_000_000_000);
+const GAS_FOR_NFT_TRANSFER: Gas = Gas(15_000_000_000_000);
 const BID_HISTORY_LENGTH_DEFAULT: u8 = 1;
 const NO_DEPOSIT: Balance = 0;
 const STORAGE_PER_SALE: u128 = 1000 * STORAGE_PRICE_PER_BYTE;
@@ -77,7 +77,7 @@ pub enum StorageKey {
 #[near_bindgen]
 impl Contract {
     #[init]
-    pub fn new(owner_id: ValidAccountId, ft_token_ids:Option<Vec<ValidAccountId>>, bid_history_length:Option<u8>) -> Self {
+    pub fn new(owner_id: AccountId, ft_token_ids:Option<Vec<AccountId>>, bid_history_length:Option<u8>) -> Self {
         let mut this = Self {
             owner_id: owner_id.into(),
             sales: UnorderedMap::new(StorageKey::Sales),
@@ -89,11 +89,11 @@ impl Contract {
             bid_history_length: bid_history_length.unwrap_or(BID_HISTORY_LENGTH_DEFAULT),
         };
         // support NEAR by default
-        this.ft_token_ids.insert(&"near".to_string());
+        this.ft_token_ids.insert(&AccountId::new_unchecked("near".to_string()));
         
         if let Some(ft_token_ids) = ft_token_ids {
             for ft_token_id in ft_token_ids {
-                this.ft_token_ids.insert(ft_token_id.as_ref());
+                this.ft_token_ids.insert(&ft_token_id);
             }
         }
 
@@ -101,11 +101,11 @@ impl Contract {
     }
 
     /// only owner 
-    pub fn add_ft_token_ids(&mut self, ft_token_ids: Vec<ValidAccountId>) -> Vec<bool> {
+    pub fn add_ft_token_ids(&mut self, ft_token_ids: Vec<AccountId>) -> Vec<bool> {
         self.assert_owner();
         let mut added = vec![];
         for ft_token_id in ft_token_ids {
-            added.push(self.ft_token_ids.insert(ft_token_id.as_ref()));
+            added.push(self.ft_token_ids.insert(&ft_token_id));
         }
         added
     }
@@ -113,7 +113,7 @@ impl Contract {
     /// TODO remove token (should check if sales can complete even if owner stops supporting token type)
 
     #[payable]
-    pub fn storage_deposit(&mut self, account_id: Option<ValidAccountId>) {
+    pub fn storage_deposit(&mut self, account_id: Option<AccountId>) {
         let storage_account_id = account_id
             .map(|a| a.into())
             .unwrap_or_else(env::predecessor_account_id);
@@ -151,7 +151,7 @@ impl Contract {
         U128(STORAGE_PER_SALE)
     }
 
-    pub fn storage_paid(&self, account_id: ValidAccountId) -> U128 {
-        U128(self.storage_deposits.get(account_id.as_ref()).unwrap_or(0))
+    pub fn storage_paid(&self, account_id: AccountId) -> U128 {
+        U128(self.storage_deposits.get(&account_id).unwrap_or(0))
     }
 }
