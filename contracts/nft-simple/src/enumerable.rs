@@ -18,6 +18,22 @@ impl Contract {
         tmp
     }
 
+    pub fn nft_token_ids(&self, from_index: Option<U128>, limit: Option<u64>) -> Vec<String> {
+        let start_index: u128 = from_index.map(From::from).unwrap_or_default();
+        assert!(
+            (self.token_metadata_by_id.len() as u128) >= start_index,
+            "Out of bounds, please use a smaller from_index."
+        );
+        let limit = limit.map(|v| v as usize).unwrap_or(usize::MAX);
+        assert_ne!(limit, 0, "Cannot provide limit of 0.");
+        self.token_metadata_by_id
+            .iter()
+            .skip(start_index as usize)
+            .take(limit)
+            .map(|(token_id, _)| token_id)
+            .collect()
+    }
+
     pub fn nft_tokens_batch(
         &self,
         token_ids: Vec<String>,

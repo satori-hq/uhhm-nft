@@ -9,6 +9,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 near-sdk = "=3.1.0"
+# near-sdk = { git = "https://github.com/mattlockyer/near-sdk-rs", rev = "70ded5b" }
 
 [profile.release]
 codegen-units=1
