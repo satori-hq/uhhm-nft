@@ -42,7 +42,7 @@ impl NonFungibleTokenApprovalsReceiver for Contract {
             "nft_on_approve should only be called via cross-contract call"
         );
         assert_eq!(
-            owner_id.as_ref(),
+            &owner_id,
             &signer_id,
             "owner_id should be signer_id"
         );
@@ -130,11 +130,11 @@ impl NonFungibleTokenApprovalsReceiver for Contract {
             assert!(token_id.contains(&token_type), "TokenType should be substr of TokenId");
             let mut by_nft_token_type = self
                 .by_nft_token_type
-                .get(&AccountId::new_unchecked(token_type))
+                .get(&AccountId::new_unchecked(token_type.clone()))
                 .unwrap_or_else(|| {
                     UnorderedSet::new(
                         StorageKey::ByNFTTokenTypeInner {
-                            token_type_hash: hash_account_id(&AccountId::new_unchecked(token_type)),
+                            token_type_hash: hash_account_id(&AccountId::new_unchecked(token_type.clone())),
                         }
                         .try_to_vec()
                         .unwrap(),
@@ -142,7 +142,7 @@ impl NonFungibleTokenApprovalsReceiver for Contract {
                 });
                 by_nft_token_type.insert(&contract_and_token_id);
             self.by_nft_token_type
-                .insert(&AccountId::new_unchecked(token_type), &by_nft_token_type);
+                .insert(&AccountId::new_unchecked(token_type.clone()), &by_nft_token_type);
         }
     }
 }

@@ -68,7 +68,7 @@ impl Contract {
 
         let token_type = sale.token_type.clone();
         if let Some(token_type) = token_type {
-            let mut by_nft_token_type = self.by_nft_token_type.get(&AccountId::new_unchecked(token_type)).expect("No sale by nft_token_type");
+            let mut by_nft_token_type = self.by_nft_token_type.get(&AccountId::new_unchecked(token_type.clone())).expect("No sale by nft_token_type");
             by_nft_token_type.remove(&contract_and_token_id);
             if by_nft_token_type.is_empty() {
                 self.by_nft_token_type.remove(&AccountId::new_unchecked(token_type));

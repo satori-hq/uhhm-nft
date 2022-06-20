@@ -77,7 +77,7 @@ impl Contract {
         let ft_token_id = "near".to_string();
         let price = sale
             .sale_conditions
-            .get(&AccountId::new_unchecked(ft_token_id))
+            .get(&AccountId::new_unchecked(ft_token_id.clone()))
             .expect("Not for sale in NEAR")
             .0;
 
@@ -88,7 +88,7 @@ impl Contract {
             self.process_purchase(
                 contract_id,
                 token_id,
-                AccountId::new_unchecked(ft_token_id),
+                AccountId::new_unchecked(ft_token_id.clone()),
                 U128(deposit),
                 buyer_id,
             );
@@ -270,7 +270,7 @@ impl Contract {
                     receiver_id,
                     amount,
                     None,
-                    ft_token_id,
+                    ft_token_id.clone(),
                     1,
                     GAS_FOR_FT_TRANSFER,
                 );

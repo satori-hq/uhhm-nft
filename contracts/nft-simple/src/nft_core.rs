@@ -3,8 +3,9 @@ use near_sdk::json_types::{U64};
 use near_sdk::{ext_contract, log, Gas, PromiseResult, AccountId};
 
 const GAS_FOR_NFT_APPROVE: Gas = Gas(25_000_000_000_000);
-const GAS_FOR_RESOLVE_TRANSFER: Gas = Gas(10_000_000_000_000);
-const GAS_FOR_NFT_TRANSFER_CALL: Gas = Gas(25_000_000_000_000) + GAS_FOR_RESOLVE_TRANSFER;
+const GAS_FOR_RESOLVE_TRANSFER_INT: u64 = 10_000_000_000_000;
+const GAS_FOR_RESOLVE_TRANSFER: Gas = Gas(GAS_FOR_RESOLVE_TRANSFER_INT);
+const GAS_FOR_NFT_TRANSFER_CALL: Gas = Gas(25_000_000_000_000 + GAS_FOR_RESOLVE_TRANSFER_INT);
 const NO_DEPOSIT: Balance = 0;
 
 pub trait NonFungibleTokenCore {
@@ -175,7 +176,7 @@ impl NonFungibleTokenCore for Contract {
             }
             assert!(total_perpetual <= MINTER_ROYALTY_CAP + CONTRACT_ROYALTY_CAP, "Royalties should not be more than caps");
             // payout to previous owner
-            payout_struct.payout.insert(owner_id, royalty_to_payout(10000 - total_perpetual, balance_u128));
+            payout_struct.payout.insert(owner_id.clone(), royalty_to_payout(10000 - total_perpetual, balance_u128));
 
             Some(payout_struct)
         } else {
@@ -220,7 +221,7 @@ impl NonFungibleTokenCore for Contract {
             previous_token.owner_id.clone(),
             token_id.clone(),
             msg,
-            receiver_id,
+            receiver_id.clone(),
             NO_DEPOSIT,
             env::prepaid_gas() - GAS_FOR_NFT_TRANSFER_CALL,
         )

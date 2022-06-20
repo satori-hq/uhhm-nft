@@ -11,16 +11,16 @@ impl Contract {
         receiver_id: Option<AccountId>,
         token_type: Option<TokenType>,
     ) {
-        assert_eq!(env::predecessor_account_id(), format!("owner.{}", env::current_account_id()), "must be owner");
+        assert_eq!(env::predecessor_account_id(), AccountId::new_unchecked(format!("owner.{}", env::current_account_id())), "must be owner");
 
         let mut final_token_id = format!("{}", self.token_metadata_by_id.len() + 1);
-        if let Some(token_id) = token_id {
+        if let Some(token_id) = token_id.clone() {
             final_token_id = token_id
         }
 
         let initial_storage_usage = env::storage_usage();
         let mut owner_id = env::predecessor_account_id();
-        if let Some(receiver_id) = receiver_id {
+        if let Some(receiver_id) = receiver_id.clone() {
             owner_id = receiver_id.into();
         }
 
