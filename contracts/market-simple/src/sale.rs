@@ -224,19 +224,19 @@ impl Contract {
             // None means a bad payout from bad NFT contract
             near_sdk::serde_json::from_slice::<Payout>(&value)
                 .ok()
-                .and_then(|payout| {
+                .and_then(|payout_struct| {
                     // gas to do 10 FT transfers (and definitely 10 NEAR transfers)
-                    if payout.len() + sale.bids.len() > 10 || payout.is_empty() {
+                    if payout_struct.payout.len() + sale.bids.len() > 10 || payout_struct.payout.is_empty() {
                         env::log(format!("Cannot have more than 10 royalties and sale.bids refunds").as_bytes());
                         None
                     } else {
                         // TODO off by 1 e.g. payouts are fractions of 3333 + 3333 + 3333
                         let mut remainder = price.0;
-                        for &value in payout.values() {
+                        for &value in payout_struct.payout.values() {
                             remainder = remainder.checked_sub(value.0)?;
                         }
                         if remainder == 0 || remainder == 1 {
-                            Some(payout)
+                            Some(payout_struct.payout)
                         } else {
                             None
                         }

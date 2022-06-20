@@ -1,7 +1,14 @@
 use crate::*;
 
 pub type TokenId = String;
-pub type Payout = HashMap<AccountId, U128>;
+
+/// payout series for royalties to market
+#[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
+#[derive(Serialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct Payout {
+	pub payout: HashMap<AccountId, U128>
+}
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Token {
