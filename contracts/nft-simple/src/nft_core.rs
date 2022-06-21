@@ -13,9 +13,12 @@ pub trait NonFungibleTokenCore {
         &mut self,
         receiver_id: AccountId,
         token_id: TokenId,
-        approval_id: u64,
+        approval_id: Option<u64>,
         memo: Option<String>,
     );
+
+    //calculates the payout for a token given the passed in balance. This is a view method
+    fn nft_payout(&self, token_id: TokenId, balance: U128, max_len_payout: u32) -> Payout;
 
     fn nft_transfer_payout(
         &mut self,
@@ -102,7 +105,7 @@ impl NonFungibleTokenCore for Contract {
         &mut self,
         receiver_id: AccountId,
         token_id: TokenId,
-        approval_id: u64,
+        approval_id: Option<u64>,
         memo: Option<String>,
     ) {
         assert_one_yocto();
@@ -111,7 +114,7 @@ impl NonFungibleTokenCore for Contract {
             &sender_id,
             &receiver_id,
             &token_id,
-            Some(approval_id),
+            approval_id,
             memo,
         );
         refund_approved_account_ids(
@@ -119,6 +122,52 @@ impl NonFungibleTokenCore for Contract {
             &previous_token.approved_account_ids,
         );
     }
+
+    //calculates the payout for a token given the passed in balance. This is a view method
+	fn nft_payout(&self, token_id: TokenId, balance: U128, max_len_payout: u32) -> Payout {
+		//get the token object
+		// let token = versioned_token_to_token(self.nft_token(token_id.clone()).expect("no token"));
+		let token = self.nft_token(token_id.clone()).expect("no token");
+
+		//get the owner of the token
+		let owner_id = token.owner_id;
+		//keep track of the total perpetual royalties
+		let mut total_perpetual = 0;
+		//get the u128 version of the passed in balance (which was U128 before)
+		let balance_u128 = u128::from(balance);
+		//keep track of the payout object to send back
+		let mut payout_object = Payout {
+				payout: HashMap::new()
+		};
+		//get the royalty object from token
+		// let mut token_id_iter = token_id.split(TOKEN_DELIMETER);
+		// let token_type_id = token_id_iter.next().unwrap().parse().unwrap();
+        let royalty = self.tokens_by_id.get(&token_id).expect("No token").royalty;
+        // let royalty = token.royalty;
+
+		//make sure we're not paying out to too many people (GAS limits this)
+		assert!(royalty.len() as u32 <= max_len_payout, "Market cannot payout to that many receivers");
+
+		//go through each key and value in the royalty object
+		for (k, v) in royalty.iter() {
+			//get the key
+			let key = k.clone();
+			//only insert into the payout if the key isn't the token owner (we add their payout at the end)
+			if key != owner_id {
+				payout_object.payout.insert(key, royalty_to_payout(*v, balance_u128));
+				total_perpetual += *v;
+			}
+		}
+
+		// payout to previous owner who gets 100% - total perpetual royalties
+		let owner_payout = royalty_to_payout(10000 - total_perpetual, balance_u128);
+		if u128::from(owner_payout) > 0 {
+			payout_object.payout.insert(owner_id, owner_payout);
+		}
+
+		//return the payout object
+		payout_object
+	}
 
     // CUSTOM - this method is included for marketplaces that respect royalties
     #[payable]
@@ -269,17 +318,17 @@ impl NonFungibleTokenCore for Contract {
         if let Some(msg) = msg {
             
             // CUSTOM - add token_type to msg
-            let mut final_msg = msg;
-            let token_type = token.token_type;
-            if let Some(token_type) = token_type {
-                final_msg.insert_str(final_msg.len() - 1, &format!(",\"token_type\":\"{}\"", token_type));
-            }
+            // let mut final_msg = msg;
+            // let token_type = token.token_type;
+            // if let Some(token_type) = token_type {
+            //     final_msg.insert_str(final_msg.len() - 1, &format!(",\"token_type\":\"{}\"", token_type));
+            // }
 
             ext_non_fungible_approval_receiver::nft_on_approve(
                 token_id,
                 token.owner_id,
                 approval_id,
-                final_msg,
+                msg,
                 account_id,
                 NO_DEPOSIT,
                 env::prepaid_gas() - GAS_FOR_NFT_APPROVE,

@@ -1,9 +1,8 @@
 const fs = require("fs");
 const BN = require("bn.js");
 const nearAPI = require("near-api-js");
-const testUtils = require("./test-utils");
-const getConfig = require("../src/config");
-const { credentials } = require("./near-utils");
+const testUtils = require("../test-utils");
+const getConfig = require("../../src/config");
 
 const {
   Contract,
@@ -15,7 +14,7 @@ const {
   transactions: { deployContract, functionCall },
 } = nearAPI;
 
-const { loadCredentials, contractAccount } = testUtils;
+const { contractAccount } = testUtils;
 
 const {
   networkId,
@@ -24,18 +23,11 @@ const {
 
   contractId,
   marketId,
-  ownerId,
   fungibleId,
-} = getConfig(true);
+} = getConfig(false);
 
 async function init() {
   // console.log(contractAccount)
-  console.log("HIIIIII");
-  const { private_key } = loadCredentials(marketId);
-  const marketAccount = await testUtils.initAccount(marketId, private_key);
-  console.log(marketAccount);
-
-  return console.log("doing nothing");
 
   // const contractBytes = fs.readFileSync('./out/main.wasm');
   // console.log('\n\n deploying contractBytes:', contractBytes.length, '\n\n');
@@ -44,12 +36,13 @@ async function init() {
   // ];
   // await contractAccount.signAndSendTransaction({ receiverId: contractId, actions });
 
+  const marketAccount = await testUtils.initAccount(
+    marketId,
+    GUESTS_ACCOUNT_SECRET
+  );
   const marketBytes = fs.readFileSync("./out/market.wasm");
   console.log("\n\n deploying marketBytes:", marketBytes.length, "\n\n");
-  const marketActions = [deployContract(marketBytes)];
-  await marketAccount.signAndSendTransaction({
-    receiverId: marketId,
-    actions: marketActions,
-  });
+  const actions = [deployContract(marketBytes)];
+  await marketAccount.signAndSendTransaction({ receiverId: marketId, actions });
 }
 init();
