@@ -43,7 +43,30 @@ pub const EVENT_JSON: &str = "EVENT_JSON:";
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
-pub struct Contract {
+pub struct ContractV1 { // OLD
+    pub tokens_per_owner: LookupMap<AccountId, UnorderedSet<TokenId>>,
+
+    pub tokens_by_id: LookupMap<TokenId, Token>,
+
+    pub token_metadata_by_id: UnorderedMap<TokenId, TokenMetadata>,
+
+    pub owner_id: AccountId,
+
+    /// The storage size in bytes for one account.
+    pub extra_storage_in_bytes_per_token: StorageUsage,
+
+    pub metadata: LazyOption<NFTMetadata>,
+
+    /// CUSTOM fields
+    pub supply_cap_by_type: TypeSupplyCaps,
+    pub tokens_per_type: LookupMap<TokenType, UnorderedSet<TokenId>>,
+    pub token_types_locked: UnorderedSet<TokenType>,
+    pub contract_royalty: u32,
+}
+
+#[near_bindgen]
+#[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
+pub struct Contract { // CURRENT
     contract_source_metadata: LazyOption<VersionedContractSourceMetadata>, // CONTRACT SOURCE METADATA: https://github.com/near/NEPs/blob/master/neps/nep-0330.md
 
     pub tokens_per_owner: LookupMap<AccountId, UnorderedSet<TokenId>>,
@@ -64,6 +87,29 @@ pub struct Contract {
     pub tokens_per_type: LookupMap<TokenType, UnorderedSet<TokenId>>,
     pub token_types_locked: UnorderedSet<TokenType>,
     pub contract_royalty: u32,
+}
+
+#[derive(BorshSerialize, BorshDeserialize)]
+pub enum VersionedContract { 
+    Current(Contract),
+}
+
+impl From<ContractV1> for Contract {
+	fn from(v1: ContractV1) -> Self {
+		Contract {
+            contract_source_metadata: LazyOption::new(StorageKey::SourceMetadata, None),
+            tokens_per_owner: v1.tokens_per_owner,
+            tokens_by_id: v1.tokens_by_id,
+            token_metadata_by_id: v1.token_metadata_by_id,
+            owner_id: v1.owner_id.clone(),
+            extra_storage_in_bytes_per_token: v1.extra_storage_in_bytes_per_token,
+            metadata: v1.metadata,
+            supply_cap_by_type: v1.supply_cap_by_type,
+            tokens_per_type: v1.tokens_per_type,
+            token_types_locked: v1.token_types_locked,
+            contract_royalty: v1.contract_royalty,
+		}
+	}
 }
 
 /// Helper structure to for keys of the persistent collections.
@@ -230,5 +276,13 @@ impl Contract {
         }
         let amt_to_refund = if env::storage_usage() > initial_storage_usage { env::storage_usage() - initial_storage_usage } else { initial_storage_usage - env::storage_usage() };
         refund_deposit(amt_to_refund);
+    }
+
+    /// Migrate from V1 to Current (remove this method after deployment/migration)
+    #[private]
+    #[init(ignore_state)]
+    pub fn migrate() -> Self {
+        let old_state: ContractV1 = env::state_read().expect("state read failed"); // was stored at StorageKey::Proposals
+		Contract::from(old_state)
     }
 }
