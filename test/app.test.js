@@ -100,7 +100,7 @@ describe("NFT Series", function () {
   it("should allow the owner to update the contract's base_uri", async function () {
     const updatedBaseUri = "https://ipfs.io";
 
-    await contractAccount.functionCall({
+    await owner.functionCall({
       contractId,
       methodName: "patch_base_uri",
       args: {
@@ -123,7 +123,7 @@ describe("NFT Series", function () {
     const updatedHash = "1".repeat(63);
     const updatedLink = "updatedLink";
 
-    await contractAccount.functionCall({
+    await owner.functionCall({
       contractId,
       methodName: "patch_contract_source_metadata",
       args: {
@@ -155,7 +155,7 @@ describe("NFT Series", function () {
 
     const updatedVersion = Date.now().toString();
 
-    await contractAccount.functionCall({
+    await owner.functionCall({
       contractId,
       methodName: "patch_contract_source_metadata",
       args: {
@@ -212,6 +212,17 @@ describe("NFT Series", function () {
   });
 
   it("should allow the owner to transfer the nft", async function () {
+    // unlock token first
+    console.log("unlocking token types");
+    await owner.functionCall({
+      contractId,
+      methodName: "unlock_token_types",
+      args: {
+        token_types: [tokenType],
+      },
+      gas,
+    });
+
     await owner.functionCall({
       contractId,
       methodName: "nft_transfer",
