@@ -81,7 +81,7 @@ describe("NFT Series", function () {
         contractId,
         methodName: "new_default_meta",
         args: {
-          owner_id: contractId,
+          owner_id: ownerId,
           supply_cap_by_type: {
             test: "1000000",
           },
