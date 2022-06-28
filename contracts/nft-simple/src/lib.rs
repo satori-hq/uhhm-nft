@@ -122,25 +122,6 @@ pub enum VersionedContract {
     Current(Contract),
 }
 
-impl From<ContractV2> for Contract {
-	fn from(v2: ContractV2) -> Self {
-		Contract {
-            contract_source_metadata: LazyOption::new(StorageKey::SourceMetadata, None),
-            tokens_per_owner: v2.tokens_per_owner,
-            tokens_by_id: v2.tokens_by_id,
-            token_metadata_by_id: v2.token_metadata_by_id,
-            owner_id: v2.owner_id.clone(),
-            extra_storage_in_bytes_per_token: v2.extra_storage_in_bytes_per_token,
-            metadata: v2.metadata,
-            supply_cap_by_type: v2.supply_cap_by_type,
-            tokens_per_type: v2.tokens_per_type,
-            token_types_locked: v2.token_types_locked,
-            contract_royalty_owner: v2.contract_royalty,
-            contract_royalty_satori: 250,
-		}
-	}
-}
-
 /// Helper structure to for keys of the persistent collections.
 #[derive(BorshSerialize, BorshStorageKey)]
 pub enum StorageKey {
@@ -314,11 +295,11 @@ impl Contract {
         refund_deposit(amt_to_refund);
     }
 
-    /// Migrate from V2 to Current (remove this method after deployment/migration)
-    #[private]
-    #[init(ignore_state)]
-    pub fn migrate() -> Self {
-        let old_state: ContractV2 = env::state_read().expect("state read failed");
-		Contract::from(old_state)
+    /// Update token metadata.media (malformed media on 103 out of original 4841 tokens)
+    pub fn patch_media_for_tokens(&mut self, token_id: TokenId, media: String) -> Option<TokenMetadata> {
+        let mut metadata = self.token_metadata_by_id.get(&token_id).expect("no token");
+        metadata.media = Some(media);
+        self.token_metadata_by_id.insert(&token_id, &metadata)
     }
+
 }
