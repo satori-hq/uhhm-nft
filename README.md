@@ -1,23 +1,28 @@
-# NFT Market Reference Implementation
+# HipHopHeads NFT & Marketplace contracts
+
+**This is the README for the originally deployed contracts. For README's on upgraded contracts, see other branches (`upgrade-#1-6-28-22` & `upgrade-#2-6-28-22`).**
+
+## NFT Market Reference Implementation
 
 A PoC backbone for NFT Marketplaces on NEAR Protocol.
 
 [Reference](https://nomicon.io/Standards/NonFungibleToken/README.html)
 
-# Changelog
+## Changelog
 
 [Changelog](changelog.md)
 
-## Progress:
+### Progress:
+
 - [x] basic purchase of NFT with FT
 - [x] demo pay out royalties (FTs and NEAR)
 - [x] test and determine standards for markets (best practice?) to buy/sell NFTs (finish standard) with FTs (already standard)
-- [x] demo some basic auction types, secondary markets and 
+- [x] demo some basic auction types, secondary markets and
 - [x] frontend example
 - [x] first pass / internal audit
 - [ ] connect with bridged tokens e.g. buy and sell with wETH/nDAI (or whatever we call these)
 
-## Notes:
+### Notes:
 
 High level diagram of NFT sale on Market using Fungible Token:
 ![image](https://user-images.githubusercontent.com/321340/113903355-bea71e80-9785-11eb-8ab3-9c2f0d23466f.png)
@@ -25,19 +30,22 @@ High level diagram of NFT sale on Market using Fungible Token:
 Remove the FT steps for NEAR transfers (but nft_transfer_payout and resolve_purchase still the same).
 
 Differences from `nft-simple` NFT standard reference implementation:
+
 - anyone can mint an NFT
 - Optional token_type
 - capped supply by token_type
 - lock transfers by token_token
 - enumerable.rs
 
-## Working
+### Working
 
 **Frontend App Demo: `/test/app.test.js/`**
+
 - install, deploy, test `yarn && yarn test:deploy`
 - run app - `yarn start`
 
 **App Tests: `/test/app.test.js/`**
+
 - install, deploy, test `yarn && yarn test:deploy`
 - if you update contracts - `yarn test:deploy`
 - if you update tests only - `yarn test`
@@ -62,27 +70,35 @@ Some additional ideas around user onboarding:
 
 [![NEAR Protocol - NFT Launcher & Easy User Onboarding Demo - Hackathon Starter Kit!](https://img.youtube.com/vi/59Lzt1PFF6I/0.jpg)](https://www.youtube.com/watch?v=59Lzt1PFF6I)
 
-# Detailed Installation / Quickstart
+## Detailed Installation / Quickstart
 
 #### If you don't have Rust
+
 Install Rust https://rustup.rs/
+
 #### If you have never used near-cli
+
 1. Install near-cli: `npm i -g near-cli`
 2. Create testnet account: [Wallet](https://wallet.testnet.near.org)
 3. Login: `near login`
+
 #### Installing and Running Tests for this Example
+
 1. Install everything: `yarn && (cd server && yarn)`
 2. Deploy the contract and run the app tests: `yarn test:deploy`
 3. (WIP) Start server and run server tests: `cd server && yarn start` then in another terminal from the root `yarn test:server`
 
 #### Notes
+
 - If you ONLY change the JS tests use `yarn test`.
 - If you change the contract run `yarn test:deploy` again.
 - If you run out of funds in the dev account run `yarn test:deploy` again.
 - If you change the dev account (yarn test:deploy) the server should restart automatically, but you may need to restart the app and sign out/in again with NEAR Wallet.
+
 ### Moar Context
 
 There's 3 main areas to explore:
+
 - frontend app - shows how to create guest accounts that are added to the app contract via the nodejs server. Guests can mind NFTs, put them up for sale and earn NEAR tokens. When the guest has NEAR they can upgrade their account to a full account.
 - app.test.js (demos frontend only tests)
 
@@ -93,9 +109,11 @@ The tests are set up to auto generate the dev account each time you run `test:de
 This is just for testing. You can obviously deploy a token to a fixed address on testnet / mainnet, it's an easy config update.
 
 #### Guests Account (key and tx gas sponsorship)
+
 When you run app / server tests. There's a contract deployed and a special account created `guests.OWNER_ACCOUNT_ID` to manage the sponsored users (the ones you will pay for gas fees while onboarding). This special "guests" account is different from the test guest account `bob.TOKEN_ID.OWNER_ACCOUNT_ID`. It is an account, different from the owner or token accounts, that manages the guests keys.
 
 #### Guest Accounts
+
 The guest users can `claim_drop, ft_transfer_guest` and receive tokens from other users, e.g. in the server tests the owner transfers tokens to the guest account via API call and using client side code.
 
 Then, following the server tests, the guest transfers tokens to alice (who is a real NEAR account e.g. she pays her own gas).
@@ -103,17 +121,18 @@ Then, following the server tests, the guest transfers tokens to alice (who is a 
 Finally, the guest upgrades themselves to a real NEAR account, something demoed in the video.
 
 It's a lot to digest but if you focus on the `/test/app.test.js` you will start to see the patterns.
-# Background
 
-One of the issues with onboarding new users to crypto is that they need to have crypto to do anything e.g. mint an NFT. A creator, artist or community might want to drop a bunch of free minting options to their fans for them to mint user generated content, but the audience has (1) no crypto to pay for fees (2) no wallet (3) no concept of crypto or blockchain; prior to the drop. 
+## Background
+
+One of the issues with onboarding new users to crypto is that they need to have crypto to do anything e.g. mint an NFT. A creator, artist or community might want to drop a bunch of free minting options to their fans for them to mint user generated content, but the audience has (1) no crypto to pay for fees (2) no wallet (3) no concept of crypto or blockchain; prior to the drop.
 
 So let's solve these issues by allowing users to generate content the traditional Web2 way!
 
 We do a demo of creating a "guest" named account for an app where the gas fees are sponsored by a special app account called "guests.APP_NAME.near". The guest account doesn't exist (sometimes called a virtual or contract account) until the user creates and sells and NFT that generates some NEAR tokens and then they can upgrade to a real account. Until then their name is reserved because only the app is able to create "USERNAME.APP_NAME.near".
 
-This has many advantages for user onboarding, where users can use the app immediately and later can be upgraded to a full account. The users also don't have to move any assets - namely the fungible tokens they earned as a guest user. 
+This has many advantages for user onboarding, where users can use the app immediately and later can be upgraded to a full account. The users also don't have to move any assets - namely the fungible tokens they earned as a guest user.
 
-## Installation
+### Installation
 
 Beyond having npm and node (latest versions), you should have Rust installed. I recommend nightly because living on the edge is fun.
 
@@ -127,21 +146,23 @@ Everything else can be installed via:
 `yarn`
 `cd server && yarn`
 
-## NEAR Config
+### NEAR Config
 
 There is only one config.js file found in `src/config.js`, this is also used for running tests.
 
 Using `src/config.js` you can set up your different environments. Use `REACT_APP_ENV` to switch environments e.g. in `package.json` script `deploy`.
 
-## Running Tests
+### Running Tests
 
 You can run unit tests in the Rust contracts themselves, but it may be more useful to JS tests against testnet itself.
 
 Note: to run the app and server tests make sure you install and start the server.
+
 - cd server
 - yarn && yarn start
 
 Commands:
+
 - `test` will simply run app tests against the contract already deployed. You can mess around with `app.test.js` and try different frontend stuff
 - `test:deploy` - will deploy a new dev account (`/neardev`) and deploy a new contract to this account, then run `test`
 - `test:server` - will test the server, make sure you start it (see "Note" above)
@@ -149,9 +170,10 @@ Commands:
 
 If you've changed your contract or your dev account has run out of funds use `test:deploy`, if you're updating your JS tests only then use `test`.
 
-## Test Utils
+### Test Utils
 
 There are helpers in `test/test-utils.js` that take care of:
+
 1. creating a near connection and establishing a keystore for the dev account
 2. creating test accounts each time a test is run
 3. establishing a contract instance so you can call methods
@@ -174,9 +196,11 @@ export const {
 	contractName,
 } = getConfig();
 ```
+
 Note the export const in the destructuring?
 
 Now you can import these like so:
+
 ```
 //example file Component.js
 import { GAS } from '../app.js'
@@ -186,118 +210,141 @@ await contract.withdraw({ amount: parseNearAmount('1') }, GAS)
 ```
 
 # React 17, Parcel with useContext and useReducer
+
 - Bundled with Parcel 2.0 (@next) && eslint
-- *Minimal all-in-one state management with async/await support*
+- _Minimal all-in-one state management with async/await support_
 
 ## Getting Started: State Store & useContext
 
->The following steps describe how to use `src/utils/state` to create and use your own `store` and `StateProvider`.
+> The following steps describe how to use `src/utils/state` to create and use your own `store` and `StateProvider`.
 
 1. Create a file e.g. `/state/app.js` and add the following code
+
 ```js
-import { State } from '../utils/state';
+import { State } from "../utils/state";
 
 // example
 const initialState = {
-	app: {
-		mounted: false
-	}
+  app: {
+    mounted: false,
+  },
 };
 
 export const { store, Provider } = State(initialState);
 ```
+
 2. Now in your `index.js` wrap your `App` component with the `StateProvider`
+
 ```js
-import { Provider } from './state/app';
+import { Provider } from "./state/app";
 
 ReactDOM.render(
-    <Provider>
-        <App />
-    </Provider>,
-    document.getElementById('root')
+  <Provider>
+    <App />
+  </Provider>,
+  document.getElementById("root")
 );
 ```
+
 3. Finally in `App.js` you can `useContext(store)`
+
 ```js
 const { state, dispatch, update } = useContext(store);
 ```
 
 ## Usage in Components
+
 ### Print out state values
+
 ```js
 <p>Hello {state.foo && state.foo.bar.hello}</p>
 ```
+
 ### Update state directly in component functions
+
 ```js
 const handleClick = () => {
-    update('clicked', !state.clicked);
+  update("clicked", !state.clicked);
 };
 ```
+
 ### Dispatch a state update function (action listener)
+
 ```js
 const onMount = () => {
-    dispatch(onAppMount('world'));
+  dispatch(onAppMount("world"));
 };
 useEffect(onMount, []);
 ```
+
 ## Dispatched Functions with context (update, getState, dispatch)
 
 When a function is called using dispatch, it expects arguments passed in to the outer function and the inner function returned to be async with the following json args: `{ update, getState, dispatch }`
 
 Example of a call:
+
 ```js
-dispatch(onAppMount('world'));
+dispatch(onAppMount("world"));
 ```
 
 All dispatched methods **and** update calls are async and can be awaited. It also doesn't matter what file/module the functions are in, since the json args provide all the context needed for updates to state.
 
 For example:
+
 ```js
-import { helloWorld } from './hello';
+import { helloWorld } from "./hello";
 
-export const onAppMount = (message) => async ({ update, getState, dispatch }) => {
-	update('app', { mounted: true });
-	update('clicked', false);
-	update('data', { mounted: true });
-	await update('', { data: { mounted: false } });
+export const onAppMount =
+  (message) =>
+  async ({ update, getState, dispatch }) => {
+    update("app", { mounted: true });
+    update("clicked", false);
+    update("data", { mounted: true });
+    await update("", { data: { mounted: false } });
 
-	console.log('getState', getState());
+    console.log("getState", getState());
 
-	update('foo.bar', { hello: true });
-	update('foo.bar', { hello: false, goodbye: true });
-	update('foo', { bar: { hello: true, goodbye: false } });
-	update('foo.bar.goodbye', true);
+    update("foo.bar", { hello: true });
+    update("foo.bar", { hello: false, goodbye: true });
+    update("foo", { bar: { hello: true, goodbye: false } });
+    update("foo.bar.goodbye", true);
 
-	await new Promise((resolve) => setTimeout(() => {
-		console.log('getState', getState());
-		resolve();
-	}, 2000));
+    await new Promise((resolve) =>
+      setTimeout(() => {
+        console.log("getState", getState());
+        resolve();
+      }, 2000)
+    );
 
-	dispatch(helloWorld(message));
-};
+    dispatch(helloWorld(message));
+  };
 ```
+
 ## Prefixing store and Provider
 
 The default names the `State` factory method returns are `store` and `Provider`. However, if you want multiple stores and provider contexts you can pass an additional `prefix` argument to disambiguate.
 
 ```js
-export const { appStore, AppProvider } = State(initialState, 'app');
+export const { appStore, AppProvider } = State(initialState, "app");
 ```
 
 ## Performance and memo
 
 The updating of a single store, even several levels down, is quite quick. If you're worried about components re-rendering, use `memo`:
+
 ```js
-import React, { memo } from 'react';
+import React, { memo } from "react";
 
 const HelloMessage = memo(({ message }) => {
-	console.log('rendered message');
-	return <p>Hello { message }</p>;
+  console.log("rendered message");
+  return <p>Hello {message}</p>;
 });
 
 export default HelloMessage;
 ```
+
 Higher up the component hierarchy you might have:
+
 ```js
 const App = () => {
 	const { state, dispatch, update } = useContext(appStore);
@@ -315,11 +362,10 @@ const App = () => {
 	);
 };
 ```
+
 When the button is clicked, the component HelloMessage will not re-render, it's value has been memoized (cached). Using this method you can easily prevent performance intensive state updates in further down components until they are neccessary.
 
 Reference:
+
 - https://reactjs.org/docs/context.html
 - https://dmitripavlutin.com/use-react-memo-wisely/
-
-
-
