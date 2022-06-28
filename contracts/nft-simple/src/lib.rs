@@ -28,8 +28,10 @@ mod contract_source;
 // CUSTOM types
 pub type TokenType = String;
 pub type TypeSupplyCaps = HashMap<TokenType, U64>;
-pub const CONTRACT_ROYALTY_CAP: u32 = 1000;
+pub const CONTRACT_ROYALTY_CAP: u32 = 1000; // royalty cap for owner
+pub const CONTRACT_ROYALTY_CAP_SATORI: u32 = 250; // royalty cap for Satori
 pub const MINTER_ROYALTY_CAP: u32 = 2000;
+pub const SATORI_ROYALTY_ACCOUNT: &str = "snft.near";
 
 /// This spec can be treated like a version of the standard.
 pub const NFT_METADATA_SPEC: &str = "nft-1.0.0";
@@ -44,6 +46,31 @@ pub const EVENT_JSON: &str = "EVENT_JSON:";
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct ContractV1 { // OLD
+    pub tokens_per_owner: LookupMap<AccountId, UnorderedSet<TokenId>>,
+
+    pub tokens_by_id: LookupMap<TokenId, Token>,
+
+    pub token_metadata_by_id: UnorderedMap<TokenId, TokenMetadata>,
+
+    pub owner_id: AccountId,
+
+    /// The storage size in bytes for one account.
+    pub extra_storage_in_bytes_per_token: StorageUsage,
+
+    pub metadata: LazyOption<NFTMetadata>,
+
+    /// CUSTOM fields
+    pub supply_cap_by_type: TypeSupplyCaps,
+    pub tokens_per_type: LookupMap<TokenType, UnorderedSet<TokenId>>,
+    pub token_types_locked: UnorderedSet<TokenType>,
+    pub contract_royalty: u32,
+}
+
+#[near_bindgen]
+#[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
+pub struct ContractV2 { // OLD
+    contract_source_metadata: LazyOption<VersionedContractSourceMetadata>, // CONTRACT SOURCE METADATA: https://github.com/near/NEPs/blob/master/neps/nep-0330.md
+
     pub tokens_per_owner: LookupMap<AccountId, UnorderedSet<TokenId>>,
 
     pub tokens_by_id: LookupMap<TokenId, Token>,
@@ -86,7 +113,8 @@ pub struct Contract { // CURRENT
     pub supply_cap_by_type: TypeSupplyCaps,
     pub tokens_per_type: LookupMap<TokenType, UnorderedSet<TokenId>>,
     pub token_types_locked: UnorderedSet<TokenType>,
-    pub contract_royalty: u32,
+    pub contract_royalty_owner: u32,
+    pub contract_royalty_satori: u32,
 }
 
 #[derive(BorshSerialize, BorshDeserialize)]
@@ -94,20 +122,21 @@ pub enum VersionedContract {
     Current(Contract),
 }
 
-impl From<ContractV1> for Contract {
-	fn from(v1: ContractV1) -> Self {
+impl From<ContractV2> for Contract {
+	fn from(v2: ContractV2) -> Self {
 		Contract {
             contract_source_metadata: LazyOption::new(StorageKey::SourceMetadata, None),
-            tokens_per_owner: v1.tokens_per_owner,
-            tokens_by_id: v1.tokens_by_id,
-            token_metadata_by_id: v1.token_metadata_by_id,
-            owner_id: v1.owner_id.clone(),
-            extra_storage_in_bytes_per_token: v1.extra_storage_in_bytes_per_token,
-            metadata: v1.metadata,
-            supply_cap_by_type: v1.supply_cap_by_type,
-            tokens_per_type: v1.tokens_per_type,
-            token_types_locked: v1.token_types_locked,
-            contract_royalty: v1.contract_royalty,
+            tokens_per_owner: v2.tokens_per_owner,
+            tokens_by_id: v2.tokens_by_id,
+            token_metadata_by_id: v2.token_metadata_by_id,
+            owner_id: v2.owner_id.clone(),
+            extra_storage_in_bytes_per_token: v2.extra_storage_in_bytes_per_token,
+            metadata: v2.metadata,
+            supply_cap_by_type: v2.supply_cap_by_type,
+            tokens_per_type: v2.tokens_per_type,
+            token_types_locked: v2.token_types_locked,
+            contract_royalty_owner: v2.contract_royalty,
+            contract_royalty_satori: 250,
 		}
 	}
 }
@@ -146,7 +175,8 @@ impl Contract {
             supply_cap_by_type,
             tokens_per_type: LookupMap::new(StorageKey::TokensPerType.try_to_vec().unwrap()),
             token_types_locked: UnorderedSet::new(StorageKey::TokenTypesLocked.try_to_vec().unwrap()),
-            contract_royalty: 0,
+            contract_royalty_owner: 0,
+            contract_royalty_satori: 0,
         };
 
         if unlocked.is_none() {
@@ -207,10 +237,16 @@ impl Contract {
 
     /// CUSTOM - setters for owner
 
-    pub fn set_contract_royalty(&mut self, contract_royalty: u32) {
+    pub fn set_contract_royalty_owner(&mut self, contract_royalty_owner: u32) {
         self.assert_owner();
-        assert!(contract_royalty <= CONTRACT_ROYALTY_CAP, "Contract royalties limited to 10% for owner");
-        self.contract_royalty = contract_royalty;
+        assert!(contract_royalty_owner <= CONTRACT_ROYALTY_CAP, "Contract royalties limited to {}% for owner", CONTRACT_ROYALTY_CAP / 100);
+        self.contract_royalty_owner = contract_royalty_owner;
+    }
+
+    pub fn set_contract_royalty_satori(&mut self, contract_royalty_satori: u32) {
+        self.assert_owner();
+        assert!(contract_royalty_satori <= CONTRACT_ROYALTY_CAP_SATORI, "Contract royalties limited to {}% for Satori", CONTRACT_ROYALTY_CAP_SATORI / 100);
+        self.contract_royalty_satori = contract_royalty_satori;
     }
 
     pub fn add_token_types(&mut self, supply_cap_by_type: TypeSupplyCaps, unlocked: Option<bool>) {
@@ -240,7 +276,7 @@ impl Contract {
     /// CUSTOM - views
 
     pub fn get_contract_royalty(&self) -> u32 {
-        self.contract_royalty
+        self.contract_royalty_owner + self.contract_royalty_satori
     }
 
     pub fn get_supply_caps(&self) -> TypeSupplyCaps {
@@ -278,11 +314,11 @@ impl Contract {
         refund_deposit(amt_to_refund);
     }
 
-    /// Migrate from V1 to Current (remove this method after deployment/migration)
+    /// Migrate from V2 to Current (remove this method after deployment/migration)
     #[private]
     #[init(ignore_state)]
     pub fn migrate() -> Self {
-        let old_state: ContractV1 = env::state_read().expect("state read failed"); // was stored at StorageKey::Proposals
+        let old_state: ContractV2 = env::state_read().expect("state read failed");
 		Contract::from(old_state)
     }
 }

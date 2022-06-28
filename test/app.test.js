@@ -40,6 +40,7 @@ describe("NFT Series", function () {
   /// users
   const aliceId = "alice-" + now + "." + contractId;
   const bobId = "bob-" + now + "." + contractId;
+  const lachlanId = "lachlan-nft-test.testnet";
   const marketId = "market." + contractId;
 
   const ownerId = "owner." + contractId;
@@ -299,18 +300,45 @@ describe("NFT Series", function () {
     assert.strictEqual(owner_id, contractId);
   });
 
-  it("should return payout object on call of nft_payout", async function () {
+  it("should return valid payout object on call of nft_payout", async function () {
     const balanceInt = 1;
     const balance = parseNearAmount(balanceInt.toString());
+
+    const CONTRACT_ROYALTY_OWNER = 1000;
+    const CONTRACT_ROYALTY_SATORI = 250;
+
+    await owner.functionCall({
+      contractId,
+      methodName: "set_contract_royalty_owner",
+      args: {
+        contract_royalty_owner: CONTRACT_ROYALTY_OWNER,
+      },
+      gas,
+    });
+
+    await owner.functionCall({
+      contractId,
+      methodName: "set_contract_royalty_satori",
+      args: {
+        contract_royalty_satori: CONTRACT_ROYALTY_SATORI,
+      },
+      gas,
+    });
 
     const res = await contractAccount.viewFunction(contractId, "nft_payout", {
       token_id,
       balance,
       max_len_payout: 9,
     });
+
+    const ownerExpected = (CONTRACT_ROYALTY_OWNER * balanceInt) / 10000;
+    const satoriExpected = (CONTRACT_ROYALTY_SATORI * balanceInt) / 10000;
     const bobExpected = (BOB_ROYALTY * balanceInt) / 10000;
-    const contractAcctExpected = balanceInt - bobExpected;
+    const contractAcctExpected =
+      balanceInt - ownerExpected - satoriExpected - bobExpected;
     const expected = {
+      "snft.near": satoriExpected.toString(),
+      [ownerId]: ownerExpected.toString(),
       [bobId]: bobExpected.toString(),
       [contractId]: contractAcctExpected.toString(),
     };

@@ -159,6 +159,18 @@ impl NonFungibleTokenCore for Contract {
 			}
 		}
 
+        // payout to contract owner - may be previous token owner, they get remainder of balance
+        if self.contract_royalty_owner > 0 && self.owner_id != owner_id {
+            payout_object.payout.insert(self.owner_id.clone(), royalty_to_payout(self.contract_royalty_owner, balance_u128));
+            total_perpetual += self.contract_royalty_owner;
+        }
+
+        // payout to Satori
+        if self.contract_royalty_satori > 0 {
+            payout_object.payout.insert(AccountId::new_unchecked(SATORI_ROYALTY_ACCOUNT.to_string()), royalty_to_payout(self.contract_royalty_satori, balance_u128));
+            total_perpetual += self.contract_royalty_satori;
+        }
+
 		// payout to previous owner who gets 100% - total perpetual royalties
 		let owner_payout = royalty_to_payout(10000 - total_perpetual, balance_u128);
 		if u128::from(owner_payout) > 0 {
@@ -219,10 +231,17 @@ impl NonFungibleTokenCore for Contract {
             }
             
             // payout to contract owner - may be previous token owner, they get remainder of balance
-            if self.contract_royalty > 0 && self.owner_id != owner_id {
-                payout_struct.payout.insert(self.owner_id.clone(), royalty_to_payout(self.contract_royalty, balance_u128));
-                total_perpetual += self.contract_royalty;
+            if self.contract_royalty_owner > 0 && self.owner_id != owner_id {
+                payout_struct.payout.insert(self.owner_id.clone(), royalty_to_payout(self.contract_royalty_owner, balance_u128));
+                total_perpetual += self.contract_royalty_owner;
             }
+
+            // payout to Satori
+            if self.contract_royalty_satori > 0 {
+                payout_struct.payout.insert(AccountId::new_unchecked(SATORI_ROYALTY_ACCOUNT.to_string()), royalty_to_payout(self.contract_royalty_satori, balance_u128));
+                total_perpetual += self.contract_royalty_satori;
+            }
+
             assert!(total_perpetual <= MINTER_ROYALTY_CAP + CONTRACT_ROYALTY_CAP, "Royalties should not be more than caps");
             // payout to previous owner
             payout_struct.payout.insert(owner_id.clone(), royalty_to_payout(10000 - total_perpetual, balance_u128));
