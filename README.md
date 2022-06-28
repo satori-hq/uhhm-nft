@@ -22,3 +22,9 @@ Branches have been frozen at deployments and are outlined below:
 
 - Adds Satori royalty at contract level, plus a Satori royalty cap (set at 2.5%), Satori account ID and a setter method
 - Initiates contract with 2.5% Satori royalty
+
+**`upgrade-#3-6-28-22` - deployed 6/28/22**
+
+- Added method for owner to patch `media` for token metadata. This was due to the fact that 103 out of 4841 tokens had malformed `media` (missing `/low-res.gif` after cid).
+- Deployed, and patched `media` for 103 malformed tokens
+- Removed patch method and redeployed
