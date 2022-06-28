@@ -296,11 +296,16 @@ impl Contract {
     }
 
     /// Update token metadata.media (malformed media on 103 out of original 4841 tokens)
+    #[payable]
     pub fn patch_media_for_token(&mut self, token_id: TokenId, media: String) -> Option<TokenMetadata> {
         self.assert_owner();
+        let initial_storage_usage = env::storage_usage();
         let mut metadata = self.token_metadata_by_id.get(&token_id).expect("no token");
         metadata.media = Some(media);
-        self.token_metadata_by_id.insert(&token_id, &metadata)
+        let updated = self.token_metadata_by_id.insert(&token_id, &metadata);
+        let amt_to_refund = if env::storage_usage() > initial_storage_usage { env::storage_usage() - initial_storage_usage } else { initial_storage_usage - env::storage_usage() };
+        refund_deposit(amt_to_refund);
+        updated
     }
 
 }
