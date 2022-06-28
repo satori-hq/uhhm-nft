@@ -10,7 +10,7 @@ Branches have been frozen at deployments and are outlined below:
 
 **`deployed-version-6-22-21` - deployed 6/22/21**
 
-- Matt/Vadim deployed
+- Matt/Vadim deployed. See README on this branch for abundant details.
 
 **`upgrade-#1-6-28-22` - deployed 6/28/22, calling `migrate` method on deploy**
 
